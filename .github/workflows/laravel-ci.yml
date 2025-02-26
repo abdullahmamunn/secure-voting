@@ -1,1 +1,80 @@
 
+name: Laravel CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.2
+          extensions: mbstring, bcmath, ctype, json, tokenizer, xml, pdo, pdo_mysql
+          tools: composer:v2
+          coverage: none
+
+      - name: Copy .env
+        run: cp .env.example .env
+
+      - name: Install Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Set Up Database
+        run: |
+          sudo systemctl start mysql
+          mysql -e 'CREATE DATABASE laravel_testing;' -uroot -proot
+
+      - name: Run Migrations & Seeders
+        env:
+          DB_DATABASE: laravel_testing
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: php artisan migrate --seed
+
+      - name: Run Tests
+        env:
+          APP_ENV: testing
+          DB_DATABASE: laravel_testing
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: php artisan test
+
+      - name: Run Laravel Pint (Code Styling)
+        run: ./vendor/bin/pint --test
+
+      - name: Run PHPStan (Static Analysis)
+        run: ./vendor/bin/phpstan analyse --no-progress
+
+      - name: Run Laravel Dusk (Browser Tests) (Optional)
+        run: php artisan dusk || true  # Ignore errors if running without GUI
+
+      - name: Cache Dependencies
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Deployment (Optional)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Deploying Laravel App..."
+          # Here, add SSH commands or use Laravel Forge/Vapor for deployment
