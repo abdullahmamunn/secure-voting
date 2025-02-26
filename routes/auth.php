@@ -36,6 +36,9 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/profile', function () {
+        return view('profile');
+    })->name('profile');
     Route::get('verify-email', EmailVerificationPromptController::class)
                 ->name('verification.notice');
 
