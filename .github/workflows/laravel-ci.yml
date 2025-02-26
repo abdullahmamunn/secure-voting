@@ -48,7 +48,7 @@ jobs:
           DB_PASSWORD: root
         run: php artisan migrate --seed
 
-      - name: Run Tests(Optional)
+      - name: Run Tests (Optional)
         env:
           APP_ENV: testing
           DB_DATABASE: laravel_testing
